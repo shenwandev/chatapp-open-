@@ -1,0 +1,92 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat App</title>
+  <style>
+    /* リストのスタイルをリセット */
+    ul {
+        list-style-type: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    /* メッセージのスタイル */
+    li {
+        background-color: #f0f0f0;
+        border-radius: 5px;
+        margin-bottom: 5px;
+        padding: 10px;
+    }
+
+    /* メッセージの送信者のスタイル */
+    li::before {
+        content: attr(data-sender);
+        font-weight: bold;
+        margin-right: 5px;
+    }
+
+    /* メッセージのタイムスタンプのスタイル */
+    li::after {
+        content: attr(data-timestamp);
+        font-size: 0.8em;
+        color: #666;
+        margin-left: 5px;
+    }
+
+  </style>
+</head>
+<body>
+  <ul id="messages"></ul>
+  <form id="messageForm">
+    <input id="messageInput" type="text" placeholder="Type a message...">
+    <input type="submit" id="sendButton">
+  </form>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+
+    const messagesList = document.getElementById('messages');
+    const messageInput = document.getElementById('messageInput');
+    const messageForm = document.getElementById('messageForm');
+
+    // メッセージを表示する関数
+    function showMessage(message) {
+        const content_date = `${message.content}`;
+        const li = document.createElement('li');
+        li.textContent = content_date;
+        li.setAttribute('data-sender', message.id);
+        li.setAttribute('data-timestamp', `[${new Date(message.timestamp).toLocaleString()}]`);
+        messagesList.appendChild(li);
+    }
+
+    // 過去のメッセージを受信したときの処理
+    socket.on('history', (messages) => {
+      messages.forEach(showMessage);
+    });
+
+    // 新しいメッセージを受信したときの処理
+    socket.on('message', showMessage);
+
+    messageForm.addEventListener('submit', (event) => {
+      event.preventDefault(); // デフォルトのフォーム送信動作を停止
+
+      const content = messageInput.value.trim();
+      if (content !== '') {
+        socket.emit('newMessage', { content });
+        messageInput.value = '';
+      }
+    });
+
+    messageInput.addEventListener('keypress', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault(); // デフォルトのEnterキーの動作を停止
+        messageForm.dispatchEvent(new Event('submit')); // フォームの送信イベントを手動でトリガーする
+      }
+    });
+  </script>
+</body>
+</html>
